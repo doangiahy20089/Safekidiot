@@ -1,0 +1,435 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Thư mục và Bản đồ</title>
+
+    <!-- Leaflet CSS và JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #fff;
+            color: #000;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .dark-mode {
+            background-color: #121212;
+            color: #fff;
+        }
+
+        header {
+            background-color: #2196F3;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        #resetPage {
+            cursor: pointer;
+        }
+
+        #darkModeToggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.3rem 0.6rem;
+            border: none;
+            background: white;
+            color: #2196F3;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .main-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .chat-container {
+            background: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .dark-mode .chat-container {
+            background: #1e1e1e;
+            border-color: #555;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        #folderNameInput {
+            flex: 1;
+            padding: 0.8rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .dark-mode #folderNameInput {
+            background: #333;
+            border-color: #555;
+            color: #fff;
+        }
+
+        #createFolderBtn {
+            padding: 0.8rem 1.5rem;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+
+            #createFolderBtn:hover {
+                background-color: #1976D2;
+            }
+
+        .folders-list {
+            margin-top: 2rem;
+        }
+
+        .folder-item {
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .dark-mode .folder-item {
+            background: #2a2a2a;
+            border-color: #555;
+        }
+
+        .folder-item:hover {
+            border-color: #2196F3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .folder-icon {
+            font-size: 2rem;
+        }
+
+        .folder-name {
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .delete-btn {
+            margin-left: auto;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0.4rem 0.8rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+            .delete-btn:hover {
+                background: #d32f2f;
+            }
+
+        #map {
+            height: 500px;
+            border-radius: 10px;
+            margin-top: 1rem;
+        }
+
+        .map-container {
+            background: #f9f9f9;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+            display: none;
+        }
+
+        .dark-mode .map-container {
+            background: #1e1e1e;
+            border-color: #555;
+        }
+
+        .map-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .location-info {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .dark-mode .location-info {
+            background: #2a2a2a;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+            padding: 2rem;
+        }
+
+        .dark-mode .empty-state {
+            color: #aaa;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1 id="resetPage">SafeKid IoT</h1>
+        <button id="darkModeToggle">🌙</button>
+    </header>
+
+    <div class="main-container">
+        <!-- Khung chat tạo thư mục -->
+        <div class="chat-container">
+            <h2>💬 Tạo thư mục mới</h2>
+            <div class="input-group">
+                <input type="text"
+                       id="folderNameInput"
+                       placeholder="Nhập tên con..."
+                       maxlength="50" />
+                <button id="createFolderBtn">Tạo thư mục</button>
+            </div>
+        </div>
+
+        <!-- Danh sách thư mục -->
+        <div class="folders-list">
+            <h2>📁 Danh sách thư mục</h2>
+            <div id="foldersContainer">
+                <div class="empty-state">
+                    Chưa có thư mục nào. Hãy tạo thư mục đầu tiên!
+                </div>
+            </div>
+        </div>
+
+        <!-- Container hiển thị bản đồ -->
+        <div class="map-container" id="mapContainer">
+            <div class="map-title" id="mapTitle">🗺️ Bản đồ cho thư mục: <span id="selectedFolderName"></span></div>
+            <div id="map"></div>
+            <div class="location-info" id="locationInfo">
+                <p>🌍 Đang yêu cầu quyền truy cập vị trí...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Quản lý Dark Mode
+        const darkModeBtn = document.getElementById("darkModeToggle");
+        darkModeBtn.addEventListener("click", () => {
+            document.body.classList.toggle("dark-mode");
+        });
+
+        // Reset trang
+        document.getElementById("resetPage").addEventListener("click", () => {
+            location.reload();
+        });
+
+        // Biến lưu trữ
+        let folders = [];
+        let map = null;
+        let userMarker = null;
+
+        // Các phần tử DOM
+        const folderNameInput = document.getElementById("folderNameInput");
+        const createFolderBtn = document.getElementById("createFolderBtn");
+        const foldersContainer = document.getElementById("foldersContainer");
+        const mapContainer = document.getElementById("mapContainer");
+        const selectedFolderName = document.getElementById("selectedFolderName");
+        const locationInfo = document.getElementById("locationInfo");
+
+        // Tạo thư mục mới
+        function createFolder() {
+            const folderName = folderNameInput.value.trim();
+
+            if (!folderName) {
+                alert("Vui lòng nhập tên thư mục!");
+                return;
+            }
+
+            if (folders.some(folder => folder.name === folderName)) {
+                alert("Thư mục đã tồn tại!");
+                return;
+            }
+
+            const newFolder = {
+                id: Date.now(),
+                name: folderName,
+                created: new Date().toLocaleString('vi-VN')
+            };
+
+            folders.push(newFolder);
+            folderNameInput.value = "";
+            renderFolders();
+        }
+
+        // Xóa thư mục
+        function deleteFolder(folderId) {
+            if (confirm("Bạn có chắc chắn muốn xóa thư mục này?")) {
+                folders = folders.filter(folder => folder.id !== folderId);
+                renderFolders();
+
+                // Ẩn bản đồ nếu thư mục đang được chọn bị xóa
+                mapContainer.style.display = "none";
+            }
+        }
+
+        // Hiển thị danh sách thư mục
+        function renderFolders() {
+            if (folders.length === 0) {
+                foldersContainer.innerHTML = '<div class="empty-state">Chưa có thư mục nào. Hãy tạo thư mục đầu tiên!</div>';
+                return;
+            }
+
+            const foldersHTML = folders.map(folder => `
+                    <div class="folder-item" onclick="openFolder('${folder.name}', ${folder.id})">
+                        <div class="folder-icon">📁</div>
+                        <div>
+                            <div class="folder-name">${folder.name}</div>
+                            <div style="font-size: 0.8rem; color: #666;">Tạo lúc: ${folder.created}</div>
+                        </div>
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteFolder(${folder.id})">
+                            🗑️ Xóa
+                        </button>
+                    </div>
+                `).join('');
+
+            foldersContainer.innerHTML = foldersHTML;
+        }
+
+        // Mở thư mục và hiển thị bản đồ
+        function openFolder(folderName, folderId) {
+            selectedFolderName.textContent = folderName;
+            mapContainer.style.display = "block";
+
+            // Khởi tạo bản đồ nếu chưa có
+            if (!map) {
+                map = L.map('map').setView([10.75, 106.65], 12);
+
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+            }
+
+            // Yêu cầu quyền truy cập vị trí
+            requestLocation();
+
+            // Scroll đến bản đồ
+            mapContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Yêu cầu và hiển thị vị trí người dùng
+        function requestLocation() {
+            locationInfo.innerHTML = '<p>🌍 Đang yêu cầu quyền truy cập vị trí...</p>';
+
+            if (!navigator.geolocation) {
+                locationInfo.innerHTML = '<p>❌ Trình duyệt không hỗ trợ định vị địa lý!</p>';
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                // Thành công
+                function (position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
+
+                    locationInfo.innerHTML = `
+                            <p>✅ <strong>Vị trí của bạn:</strong></p>
+                            <p>📍 Tọa độ: ${lat.toFixed(6)}, ${lng.toFixed(6)}</p>
+                            <p>🎯 Độ chính xác: ~${Math.round(accuracy)} mét</p>
+                            <p>🕐 Thời gian: ${new Date().toLocaleString('vi-VN')}</p>
+                        `;
+
+                    // Xóa marker cũ nếu có
+                    if (userMarker) {
+                        map.removeLayer(userMarker);
+                    }
+
+                    // Tạo marker cho vị trí người dùng
+                    userMarker = L.marker([lat, lng]).addTo(map)
+                        .bindPopup(`
+                                <b>📍 Vị trí của bạn</b><br>
+                                Tọa độ: ${lat.toFixed(6)}, ${lng.toFixed(6)}<br>
+                                Độ chính xác: ~${Math.round(accuracy)} mét
+                            `)
+                        .openPopup();
+
+                    // Di chuyển bản đồ đến vị trí người dùng
+                    map.setView([lat, lng], 15);
+                },
+                // Lỗi
+                function (error) {
+                    let errorMessage = "";
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage = "❌ Bạn đã từ chối chia sẻ vị trí. Vui lòng cho phép truy cập vị trí trong cài đặt trình duyệt.";
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage = "❌ Không thể xác định vị trí của bạn.";
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage = "❌ Yêu cầu vị trí đã hết thời gian chờ.";
+                            break;
+                        default:
+                            errorMessage = "❌ Đã xảy ra lỗi không xác định khi lấy vị trí.";
+                            break;
+                    }
+                    locationInfo.innerHTML = `<p>${errorMessage}</p>`;
+                },
+                // Tùy chọn
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 600000 // 10 phút
+                }
+            );
+        }
+
+        // Sự kiện
+        createFolderBtn.addEventListener("click", createFolder);
+
+        folderNameInput.addEventListener("keypress", function (e) {
+            if (e.key === "Enter") {
+                createFolder();
+            }
+        });
+
+        // Khởi tạo
+        renderFolders();
+    </script>
+</body>
+</html>
