@@ -194,6 +194,23 @@
             background: #2a2a2a;
         }
 
+        .folders-list h2 {
+            color: #2196F3;
+            transition: color 0.3s;
+        }
+
+            .folders-list h2:hover {
+                color: #1976D2;
+            }
+
+        .dark-mode .folders-list h2 {
+            color: #64B5F6;
+        }
+
+            .dark-mode .folders-list h2:hover {
+                color: #90CAF9;
+            }
+
         .empty-state {
             text-align: center;
             color: #666;
@@ -209,7 +226,7 @@
 
 <body>
     <header>
-        <h1 id="resetPage">SafeKid IoT</h1>
+        <h1 id="resetPage">QUẢN LÝ THƯ MỤC VÀ BẢN ĐỒ</h1>
         <button id="darkModeToggle">🌙</button>
     </header>
 
@@ -220,7 +237,7 @@
             <div class="input-group">
                 <input type="text"
                        id="folderNameInput"
-                       placeholder="Nhập tên con..."
+                       placeholder="Nhập tên thư mục..."
                        maxlength="50" />
                 <button id="createFolderBtn">Tạo thư mục</button>
             </div>
@@ -228,7 +245,7 @@
 
         <!-- Danh sách thư mục -->
         <div class="folders-list">
-            <h2>📁 Danh sách thư mục</h2>
+            <h2 id="foldersTitle" style="cursor: pointer;">📁 Danh sách thư mục</h2>
             <div id="foldersContainer">
                 <div class="empty-state">
                     Chưa có thư mục nào. Hãy tạo thư mục đầu tiên!
