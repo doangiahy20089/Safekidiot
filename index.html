@@ -284,6 +284,7 @@
         const folderNameInput = document.getElementById("folderNameInput");
         const createFolderBtn = document.getElementById("createFolderBtn");
         const foldersContainer = document.getElementById("foldersContainer");
+        const foldersTitle = document.getElementById("foldersTitle");
         const mapContainer = document.getElementById("mapContainer");
         const selectedFolderName = document.getElementById("selectedFolderName");
         const locationInfo = document.getElementById("locationInfo");
@@ -320,8 +321,23 @@
                 renderFolders();
 
                 // Ẩn bản đồ nếu thư mục đang được chọn bị xóa
-                mapContainer.style.display = "none";
+                hideMap();
             }
+        }
+
+        // Ẩn bản đồ và trở về trang chính
+        function hideMap() {
+            mapContainer.style.display = "none";
+            selectedFolderName.textContent = "";
+
+            // Xóa marker người dùng nếu có
+            if (userMarker && map) {
+                map.removeLayer(userMarker);
+                userMarker = null;
+            }
+
+            // Scroll về đầu trang
+            document.querySelector('.main-container').scrollIntoView({ behavior: 'smooth' });
         }
 
         // Hiển thị danh sách thư mục
@@ -444,6 +460,9 @@
                 createFolder();
             }
         });
+
+        // Thêm sự kiện nhấn vào tiêu đề "Danh sách thư mục"
+        foldersTitle.addEventListener("click", hideMap);
 
         // Khởi tạo
         renderFolders();
