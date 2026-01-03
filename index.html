@@ -1,18 +1,19 @@
+
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SafeKid IoT - Theo dõi An toàn Trẻ em</title>
-   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-   
+    <!-- MQTT over WebSocket -->
     <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 
     <style>
-      
+        /* (Giữ nguyên toàn bộ CSS gốc của bạn) */
         * {
             margin: 0;
             padding: 0;
@@ -497,7 +498,7 @@
 
         <div class="main-content">
             <div class="sidebar">
-              
+                <!-- Thống kê -->
                 <div class="section">
                     <div class="section-title">
                         <i class="fas fa-chart-bar"></i>
@@ -515,6 +516,7 @@
                     </div>
                 </div>
 
+                <!-- Thêm thiết bị -->
                 <div class="section">
                     <div class="section-title">
                         <i class="fas fa-plus-circle"></i>
@@ -543,7 +545,7 @@
                     </button>
                 </div>
 
-                
+                <!-- Danh sách thiết bị -->
                 <div class="section">
                     <div class="section-title">
                         <i class="fas fa-list"></i>
@@ -556,7 +558,7 @@
                     </div>
                 </div>
 
-              
+                <!-- Điều khiển -->
                 <div class="section">
                     <div class="section-title">
                         <i class="fas fa-location-arrow"></i>
@@ -573,7 +575,7 @@
                     </button>
                 </div>
 
-               
+                <!-- MQTT Connect Controls -->
                 <div class="section">
                     <div class="section-title">
                         <i class="fas fa-plug"></i>
@@ -625,7 +627,7 @@
                 </div>
             </div>
 
-           
+            <!-- Chat Box -->
             <div class="chat-container">
                 <div class="chat-header">
                     <div class="chat-title">
@@ -655,17 +657,11 @@
     </div>
 
     <script>
-<<<<<<< HEAD
-        
+        // ---------------------------
+        // Map init (giữ nguyên)
+        // ---------------------------
         var map = L.map('map').setView([10.9453, 106.8243], 13);
 
-=======
-        // Khởi tạo bản đồ
-       // var map = L.map('map').setView([10.7769, 106.7009], 13); // TP.HCM
-       // var map = L.map('map').setView([11.0, 107.1], 9); //Toàn tỉnh Đồng Nai
-          var map = L.map('map').setView([10.9453, 106.8243], 13); //cục bộ Đồng Nai
-        // Lớp bản đồ
->>>>>>> cffac85127651d1b946befc16b1e907f5cf289d5
         var streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap contributors'
@@ -679,14 +675,8 @@
         streetMap.addTo(map);
         var isStreetMap = true;
 
-<<<<<<< HEAD
-      
-        var homePoint = [10.933750236765478, 106.8312536793566];
-=======
         // Điểm xuất phát (nhà/trường)
-            //var homePoint = [10.7769, 106.7009];
-        var homePoint = [10.933750236765478, 106.8312536793566]; //gốc tọa độ trường Nam Hà
->>>>>>> cffac85127651d1b946befc16b1e907f5cf289d5
+        var homePoint = [10.933750236765478, 106.8312536793566];
         var homeIcon = L.divIcon({
             className: 'custom-div-icon',
             html: '<i class="fas fa-home" style="color: #e53e3e; font-size: 20px;"></i>',
@@ -695,14 +685,17 @@
         });
         L.marker(homePoint, { icon: homeIcon }).addTo(map).bindPopup("<b>🏠 Điểm xuất phát</b><br>Nhà/Trường học");
 
-       
+        // ---------------------------
+        // Data structures
+        // ---------------------------
+        // devices array kept for UI compatibility, but we'll also keep maps:
         var devices = []; // {sim,name,lat,lng,...}
         var markers = {}; // sim -> L.marker
         var polylines = {}; // sim -> L.polyline
         var paths = {}; // sim -> Array of [lat,lng]
         var selectedDevice = null;
 
-      
+        // child icon
         var childIcon = L.divIcon({
             className: 'custom-div-icon',
             html: '<i class="fas fa-child" style="color: #48bb78; font-size: 16px;"></i>',
@@ -710,6 +703,9 @@
             iconAnchor: [12, 12]
         });
 
+        // ---------------------------
+        // Helper functions (UI)
+        // ---------------------------
         function showAlert(message, type) {
             type = type || 'error';
             var alert = document.getElementById('alert');
@@ -1117,7 +1113,9 @@
         }
 
         // ---------------------------
-        
+        // Init: prefill MQTT fields if you want (example values)
+        // ---------------------------
+        // Nếu bạn muốn tự động điền host/user từ lần trước, đặt ở đây:
         document.getElementById('mqttHost').value = 'c53d20bafaec4b96a4f29ffa91cb7eb0.s1.eu.hivemq.cloud'; // example from your screenshot
         document.getElementById('mqttUser').value = 'doangiahy12';
         // document.getElementById('mqttPass').value = '...'; // điền mật khẩu ở đây nếu muốn
@@ -1144,9 +1142,15 @@
             updateStats();
         };
 
-      
+        // ---------------------------
+        // Load previously saved devices? (not implemented: placeholder)
+        // ---------------------------
+
+        // ---------------------------
+        // Basic simulate function (dev)
+        // ---------------------------
         window.simulatePublish = function (sim) {
-           
+            // push a message through MQTT client (useful for testing)
             var s = sim || 'SIM_TEST_01';
             var latlng = randomLatLng();
             var payload = JSON.stringify({ sim: s, name: 'Bé ' + s.slice(-3), lat: latlng[0], lng: latlng[1], ts: (new Date()).toISOString() });
@@ -1155,13 +1159,13 @@
                 mqttClient.publish('safekid/' + s + '/location', payload);
                 addMessageToChat('Hệ thống', 'MQTT', 'Đã gửi thử payload tới topic safekid/' + s + '/location', 'info');
             } else {
-               
+                // simulate locally without broker
                 handleLocationMessage(s, 'Bé ' + s.slice(-3), latlng[0], latlng[1]);
                 addMessageToChat('Hệ thống', 'SIM', 'Đã mô phỏng vị trí (offline)', 'info');
             }
         };
 
-               
+            // End of script
     </script>
 </body>
 </html>
