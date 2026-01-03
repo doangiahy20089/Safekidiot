@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeKid IoT - Theo dõi An toàn Trẻ em</title>
+   <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+   
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+    <style>
+      
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #2563eb;
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+            .header h1 {
+                font-size: 2.5rem;
+                margin-bottom: 10px;
+                text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+                transition: all 0.3s ease;
+            }
+
+                .header h1:hover {
+                    transform: scale(1.05);
+                    text-shadow: 0 4px 8px rgba(0,0,0,0.4);
+                }
+
+            .header .subtitle {
+                font-size: 1.1rem;
+                opacity: 0.9;
+            }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr 320px;
+            gap: 20px;
+            height: 600px;
+        }
+
+        .sidebar {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            overflow-y: auto;
+        }
+
+        .map-container {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            position: relative;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+            .form-group label {
+                display: block;
+                margin-bottom: 5px;
+                font-weight: 500;
+                color: #2d3748;
+            }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+            .form-input:focus {
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+            .btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            }
+
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+
+            .btn-success:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
+            }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+            color: white;
+        }
+
+            .btn-warning:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(237, 137, 54, 0.4);
+            }
+
+        .btn-full {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .device-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .device-item {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+            .device-item:hover {
+                background: #edf2f7;
+                border-color: #667eea;
+            }
+
+            .device-item.active {
+                background: linear-gradient(135deg, #667eea15, #764ba215);
+                border-color: #667eea;
+            }
+
+        .device-name {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 5px;
+        }
+
+        .device-sim {
+            font-size: 12px;
+            color: #718096;
+            font-family: monospace;
+        }
+
+        .device-status {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #48bb78;
+            box-shadow: 0 0 0 2px #48bb7840;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 #48bb7840;
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(72, 187, 120, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(72, 187, 120, 0);
+            }
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .stat-number {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #718096;
+            margin-top: 5px;
+        }
+
+        .alert {
+            background: #fed7d7;
+            border: 1px solid #fc8181;
+            color: #c53030;
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            display: none;
+        }
+
+            .alert.show {
+                display: block;
+            }
+
+        .map-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+            .control-btn:hover {
+                background: #667eea;
+                color: white;
+                transform: scale(1.1);
+            }
+
+        /* Chat Box Styles */
+        .chat-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-header {
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 15px;
+        }
+
+        .chat-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 85%;
+            word-wrap: break-word;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message-received {
+            background: linear-gradient(135deg, #e6f7ff 0%, #d6f0ff 100%);
+            border: 1px solid #91d5ff;
+            align-self: flex-start;
+        }
+
+        .message-system {
+            background: linear-gradient(135deg, #fff7e6 0%, #ffe7ba 100%);
+            border: 1px solid #ffd591;
+            align-self: center;
+            max-width: 90%;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        .message-header {
+            font-size: 11px;
+            color: #718096;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .message-device {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .message-content {
+            color: #2d3748;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .message-time {
+            font-size: 10px;
+            color: #a0aec0;
+            margin-top: 4px;
+        }
+
+        .chat-input-area {
+            padding-top: 15px;
+            border-top: 2px solid #e2e8f0;
+            margin-top: 15px;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 14px;
+            resize: none;
+            transition: border-color 0.3s ease;
+        }
+
+            .chat-input:focus {
+                outline: none;
+                border-color: #667eea;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            }
+
+        .message-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-left: 5px;
+        }
+
+        .badge-alert {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .badge-info {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+
+            .sidebar {
+                order: 2;
+                height: auto;
+            }
+
+            .map-container {
+                order: 1;
+                height: 400px;
+            }
+
+            .chat-container {
+                order: 3;
+                height: 400px;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .header .subtitle {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-shield-alt"></i> SafeKid IoT</h1>
+            <div class="subtitle">Hệ thống theo dõi an toàn trẻ em thông minh</div>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+              
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-chart-bar"></i>
+                        Tổng quan
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-number" id="totalDevices">0</div>
+                            <div class="stat-label">Thiết bị</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-number" id="onlineDevices">0</div>
+                            <div class="stat-label">Đang hoạt động</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-plus-circle"></i>
+                        Thêm thiết bị mới
+                    </div>
+
+                    <div id="alert" class="alert"></div>
+
+                    <div class="form-group">
+                        <label for="simInput">
+                            <i class="fas fa-sim-card"></i> Số SIM
+                        </label>
+                        <input type="text" id="simInput" class="form-input" placeholder="Ví dụ: 8984012345678901234">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="nameInput">
+                            <i class="fas fa-child"></i> Tên trẻ
+                        </label>
+                        <input type="text" id="nameInput" class="form-input" placeholder="Ví dụ: Bé An">
+                    </div>
+
+                    <button onclick="addDevice()" class="btn btn-success btn-full">
+                        <i class="fas fa-plus"></i>
+                        Thêm thiết bị
+                    </button>
+                </div>
+
+                
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-list"></i>
+                        Danh sách thiết bị
+                    </div>
+                    <div id="deviceList" class="device-list">
+                        <div style="text-align: center; color: #718096; padding: 20px;">
+                            Chưa có thiết bị nào
+                        </div>
+                    </div>
+                </div>
+
+              
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-location-arrow"></i>
+                        Điều khiển
+                    </div>
+                    <button onclick="showRoute()" class="btn btn-primary btn-full">
+                        <i class="fas fa-route"></i>
+                        Hiện đường đi
+                    </button>
+                    <br><br>
+                    <button onclick="centerMap()" class="btn btn-warning btn-full">
+                        <i class="fas fa-crosshairs"></i>
+                        Về trung tâm
+                    </button>
+                </div>
+
+               
+                <div class="section">
+                    <div class="section-title">
+                        <i class="fas fa-plug"></i>
+                        MQTT (WebSocket)
+                    </div>
+                    <div class="form-group">
+                        <label>Broker host</label>
+                        <input id="mqttHost" class="form-input" placeholder="Ví dụ: c53d20...s1.eu.hivemq.cloud">
+                    </div>
+                    <div class="form-group" style="display:flex;gap:8px">
+                        <div style="flex:1">
+                            <label>Port</label>
+                            <input id="mqttPort" class="form-input" value="8884">
+                        </div>
+                        <div style="flex:1">
+                            <label>ClientID</label>
+                            <input id="mqttClientId" class="form-input" value="webclient-1">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Username</label>
+                        <input id="mqttUser" class="form-input" placeholder="doangiahy12">
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input id="mqttPass" class="form-input" type="password" placeholder="(nhập mật khẩu)">
+                    </div>
+                    <div style="display:flex;gap:8px;margin-top:8px">
+                        <button id="btnMqttConnect" class="btn btn-primary">Kết nối MQTT</button>
+                        <button id="btnMqttDisconnect" class="btn" disabled>Ngắt</button>
+                    </div>
+                    <div style="font-size:13px;color:#718096;margin-top:8px">
+                        <div>Mặc định subscribe: <code>safekid/+/#</code></div>
+                        <div>Hỗ trợ payload: JSON { "sim","lat","lng","name" } hoặc chuỗi "lat,lng" hoặc text</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="map-container">
+                <div id="map"></div>
+                <div class="map-controls">
+                    <button class="control-btn" onclick="toggleSatellite()" title="Chuyển chế độ bản đồ">
+                        <i class="fas fa-satellite"></i>
+                    </button>
+                    <button class="control-btn" onclick="locateUser()" title="Vị trí của tôi">
+                        <i class="fas fa-location-crosshairs"></i>
+                    </button>
+                </div>
+            </div>
+
+           
+            <div class="chat-container">
+                <div class="chat-header">
+                    <div class="chat-title">
+                        <i class="fas fa-comments"></i>
+                        Tin nhắn từ thiết bị
+                    </div>
+                </div>
+
+                <div id="chatMessages" class="chat-messages">
+                    <div class="message message-system">
+                        <div class="message-content">
+                            💬 Chào mừng đến với hệ thống SafeKid IoT<br>
+                            Tin nhắn từ thiết bị sẽ hiển thị tại đây
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chat-input-area">
+                    <textarea id="chatInput"
+                              class="chat-input"
+                              rows="2"
+                              placeholder="Nhập tin nhắn... (Chức năng demo)"
+                              disabled></textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+<<<<<<< HEAD
+        
+        var map = L.map('map').setView([10.9453, 106.8243], 13);
+
+=======
+        // Khởi tạo bản đồ
+       // var map = L.map('map').setView([10.7769, 106.7009], 13); // TP.HCM
+       // var map = L.map('map').setView([11.0, 107.1], 9); //Toàn tỉnh Đồng Nai
+          var map = L.map('map').setView([10.9453, 106.8243], 13); //cục bộ Đồng Nai
+        // Lớp bản đồ
+>>>>>>> cffac85127651d1b946befc16b1e907f5cf289d5
+        var streetMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        });
+
+        var satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: '© Esri'
+        });
+
+        streetMap.addTo(map);
+        var isStreetMap = true;
+
+<<<<<<< HEAD
+      
+        var homePoint = [10.933750236765478, 106.8312536793566];
+=======
+        // Điểm xuất phát (nhà/trường)
+            //var homePoint = [10.7769, 106.7009];
+        var homePoint = [10.933750236765478, 106.8312536793566]; //gốc tọa độ trường Nam Hà
+>>>>>>> cffac85127651d1b946befc16b1e907f5cf289d5
+        var homeIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: '<i class="fas fa-home" style="color: #e53e3e; font-size: 20px;"></i>',
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
+        });
+        L.marker(homePoint, { icon: homeIcon }).addTo(map).bindPopup("<b>🏠 Điểm xuất phát</b><br>Nhà/Trường học");
+
+       
+        var devices = []; // {sim,name,lat,lng,...}
+        var markers = {}; // sim -> L.marker
+        var polylines = {}; // sim -> L.polyline
+        var paths = {}; // sim -> Array of [lat,lng]
+        var selectedDevice = null;
+
+      
+        var childIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: '<i class="fas fa-child" style="color: #48bb78; font-size: 16px;"></i>',
+            iconSize: [25, 25],
+            iconAnchor: [12, 12]
+        });
+
+        function showAlert(message, type) {
+            type = type || 'error';
+            var alert = document.getElementById('alert');
+            alert.textContent = message;
+            alert.className = 'alert show';
+            alert.style.background = type === 'success' ? '#c6f6d5' : '#fed7d7';
+            alert.style.borderColor = type === 'success' ? '#68d391' : '#fc8181';
+            alert.style.color = type === 'success' ? '#22543d' : '#c53030';
+
+            setTimeout(function () {
+                alert.classList.remove('show');
+            }, 3000);
+        }
+
+        function updateStats() {
+            document.getElementById('totalDevices').textContent = devices.length;
+            document.getElementById('onlineDevices').textContent = Object.keys(markers).length;
+        }
+
+        function addDeviceToUI(device) {
+            var deviceList = document.getElementById('deviceList');
+            if (deviceList.children[0] && deviceList.children[0].textContent.includes('Chưa có thiết bị')) {
+                deviceList.innerHTML = '';
+            }
+
+            // create only if not exists
+            if (document.getElementById('dev_' + device.sim)) return;
+
+            var deviceDiv = document.createElement('div');
+            deviceDiv.className = 'device-item';
+            deviceDiv.id = 'dev_' + device.sim;
+            deviceDiv.onclick = function () { selectDevice(device.sim); };
+            deviceDiv.innerHTML =
+                '<div class="device-status" id="status_' + device.sim + '"></div>' +
+                '<div class="device-name">' + device.name + '</div>' +
+                '<div class="device-sim">SIM: ' + device.sim + '</div>';
+            deviceList.appendChild(deviceDiv);
+        }
+
+        function updateDeviceUI(sim, lat, lng) {
+            var statusEl = document.getElementById('status_' + sim);
+            if (statusEl) {
+                statusEl.style.background = '#48bb78';
+            }
+            var devEl = document.getElementById('dev_' + sim);
+            if (devEl) {
+                // update last lat/lng small text
+                var info = devEl.querySelector('.device-sim');
+                if (info) info.textContent = 'SIM: ' + sim + ' • ' + lat.toFixed(4) + ',' + lng.toFixed(4);
+            }
+        }
+
+        function selectDevice(sim) {
+            selectedDevice = sim;
+            var deviceItems = document.querySelectorAll('.device-item');
+            deviceItems.forEach(function (item) { item.classList.remove('active'); });
+            var el = document.getElementById('dev_' + sim);
+            if (el) el.classList.add('active');
+
+            if (markers[sim]) {
+                map.setView([markers[sim].getLatLng().lat, markers[sim].getLatLng().lng], 16);
+                markers[sim].openPopup();
+            }
+        }
+
+        function addMessageToChat(deviceName, deviceSim, content, type) {
+            type = type || 'info';
+            var chatMessages = document.getElementById('chatMessages');
+            var messageDiv = document.createElement('div');
+            messageDiv.className = type === 'alert' ? 'message message-system' : 'message message-received';
+
+            var now = new Date();
+            var timeString = now.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+
+            var badgeText = type === 'alert' ? 'CẢNH BÁO' : 'THÔNG TIN';
+
+            messageDiv.innerHTML =
+                '<div class="message-header">' +
+                '<i class="fas fa-child"></i>' +
+                '<span class="message-device">' + (deviceName || 'Thiết bị') + '</span>' +
+                '<span class="message-badge ' + (type === 'alert' ? 'badge-alert' : 'badge-info') + '">' + badgeText + '</span>' +
+                '</div>' +
+                '<div class="message-content">' + content + '</div>' +
+                '<div class="message-time">' + timeString + ' • SIM: ' + (deviceSim || '-') + '</div>';
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // ---------------------------
+        // Add device (manual)
+        // ---------------------------
+        function addDevice() {
+            var sim = document.getElementById('simInput').value.trim();
+            var name = document.getElementById('nameInput').value.trim();
+
+            if (!sim || !name) {
+                showAlert('Vui lòng nhập đầy đủ thông tin!', 'error');
+                return;
+            }
+
+            if (devices.some(function (d) { return d.sim === sim; })) {
+                showAlert('Số SIM này đã được đăng ký!', 'error');
+                return;
+            }
+
+            var coords = randomLatLng();
+            var device = {
+                sim: sim,
+                name: name,
+                lat: coords[0],
+                lng: coords[1],
+                createdAt: new Date()
+            };
+
+            devices.push(device);
+            addDeviceToUI(device);
+
+            // create marker & polyline
+            var marker = L.marker([device.lat, device.lng], { icon: childIcon })
+                .addTo(map)
+                .bindPopup('<b>👶 ' + device.name + '</b><br>SIM: ' + device.sim);
+
+            markers[device.sim] = marker;
+            paths[device.sim] = [[device.lat, device.lng]];
+            polylines[device.sim] = L.polyline(paths[device.sim], { color: '#3b82f6', weight: 4 }).addTo(map);
+
+            updateStats();
+
+            showAlert('Đã thêm thiết bị cho ' + name + ' thành công!', 'success');
+
+            setTimeout(function () {
+                addMessageToChat(name, sim, '🎉 Thiết bị đã được kết nối thành công! Đang theo dõi vị trí...', 'info');
+            }, 500);
+
+            document.getElementById('simInput').value = '';
+            document.getElementById('nameInput').value = '';
+        }
+
+        // ---------------------------
+        // Helpers: random coords (for initial)
+        // ---------------------------
+        function randomLatLng() {
+            var lat = 10.9453 + (Math.random() - 0.5) * 0.05;
+            var lng = 106.8243 + (Math.random() - 0.5) * 0.05;
+            return [lat, lng];
+        }
+
+        // ---------------------------
+        // Routing & map controls kept
+        // ---------------------------
+        var routeLines = [];
+
+        function showRoute() {
+            if (!selectedDevice) {
+                showAlert('Vui lòng chọn một thiết bị!', 'error');
+                return;
+            }
+
+            var device = devices.find(function (d) { return d.sim === selectedDevice; });
+            if (!device) return;
+
+            routeLines.forEach(function (line) { map.removeLayer(line); });
+            routeLines = [];
+
+            var routeLine = L.polyline([homePoint, [device.lat, device.lng]], {
+                color: '#e53e3e',
+                weight: 4,
+                opacity: 0.8,
+                dashArray: '10, 10'
+            }).addTo(map);
+
+            routeLines.push(routeLine);
+
+            var group = new L.featureGroup([markers[selectedDevice], L.marker(homePoint)]);
+            map.fitBounds(group.getBounds().pad(0.1));
+
+            var distance = map.distance(homePoint, [device.lat, device.lng]);
+            var distanceKm = (distance / 1000).toFixed(2);
+
+            showAlert('Đã hiển thị đường đi đến ' + device.name, 'success');
+
+            addMessageToChat(device.name, device.sim, '📏 Khoảng cách từ điểm xuất phát: ' + distanceKm + ' km', 'info');
+        }
+
+        function centerMap() {
+            map.setView(homePoint, 13);
+            routeLines.forEach(function (line) { map.removeLayer(line); });
+            routeLines = [];
+        }
+
+        function toggleSatellite() {
+            if (isStreetMap) {
+                map.removeLayer(streetMap);
+                map.addLayer(satelliteMap);
+            } else {
+                map.removeLayer(satelliteMap);
+                map.addLayer(streetMap);
+            }
+            isStreetMap = !isStreetMap;
+        }
+
+        function locateUser() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function (position) {
+                    var lat = position.coords.latitude;
+                    var lng = position.coords.longitude;
+                    map.setView([lat, lng], 16);
+
+                    var userMarker = L.marker([lat, lng]).addTo(map)
+                        .bindPopup("📍 Vị trí của bạn")
+                        .openPopup();
+
+                    setTimeout(function () {
+                        map.removeLayer(userMarker);
+                    }, 5000);
+                }, function () {
+                    showAlert('Không thể xác định vị trí của bạn', 'error');
+                });
+            } else {
+                showAlert('Trình duyệt không hỗ trợ định vị', 'error');
+            }
+        }
+
+        // ---------------------------
+        // MQTT: connect & message handling
+        // ---------------------------
+        var mqttClient = null;
+
+        // UI buttons
+        var btnConnect = document.getElementById('btnMqttConnect');
+        var btnDisconnect = document.getElementById('btnMqttDisconnect');
+
+        btnConnect.addEventListener('click', function () {
+            var host = document.getElementById('mqttHost').value.trim();
+            var port = parseInt(document.getElementById('mqttPort').value.trim()) || 8884;
+            var clientId = document.getElementById('mqttClientId').value.trim() || ('webclient-' + Math.random().toString(16).substr(2, 8));
+            var username = document.getElementById('mqttUser').value.trim();
+            var password = document.getElementById('mqttPass').value;
+
+            if (!host) {
+                showAlert('Vui lòng nhập MQTT host', 'error');
+                return;
+            }
+
+            // build wss URL (HiveMQ Cloud uses wss + port 8884)
+            var url = 'wss://' + host + ':' + port + '/mqtt';
+
+            var options = {
+                keepalive: 30,
+                clientId: clientId,
+                username: username || undefined,
+                password: password || undefined,
+                reconnectPeriod: 4000,
+                connectTimeout: 30 * 1000
+            };
+
+            try {
+                mqttClient = mqtt.connect(url, options);
+            } catch (e) {
+                showAlert('Kết nối MQTT thất bại: ' + e.message, 'error');
+                return;
+            }
+
+            mqttClient.on('connect', function () {
+                addMessageToChat('Hệ thống', 'MQTT', 'Đã kết nối tới broker', 'info');
+                btnConnect.disabled = true;
+                btnDisconnect.disabled = false;
+
+                // subscribe to topics
+                // subscribe to all safekid topics - adjust to your topics
+                mqttClient.subscribe('safekid/+/#', { qos: 0 }, function (err) {
+                    if (err) addMessageToChat('Hệ thống', 'MQTT', 'Subscribe lỗi: ' + err.message, 'alert');
+                });
+            });
+
+            mqttClient.on('reconnect', function () {
+                addMessageToChat('Hệ thống', 'MQTT', 'Đang kết nối lại...', 'info');
+            });
+
+            mqttClient.on('close', function () {
+                addMessageToChat('Hệ thống', 'MQTT', 'MQTT đóng kết nối', 'alert');
+                btnConnect.disabled = false;
+                btnDisconnect.disabled = true;
+            });
+
+            mqttClient.on('error', function (err) {
+                addMessageToChat('Hệ thống', 'MQTT', 'Lỗi MQTT: ' + (err.message || err), 'alert');
+            });
+
+            mqttClient.on('message', function (topic, payloadBuffer) {
+                var payload = payloadBuffer.toString();
+                // Try to get sim from topic: safekid/{sim}/{subtopic}
+                var simFromTopic = null;
+                try {
+                    var tp = topic.split('/');
+                    if (tp.length >= 2) simFromTopic = tp[1];
+                } catch (e) { }
+
+                // Process payload:
+                // Cases:
+                // 1) JSON with lat,lng (e.g. {"sim":"...","lat":10,"lng":106,"name":"Be A"})
+                // 2) Plain "lat,lng"
+                // 3) Plain text / alert -> display as message
+
+                var handled = false;
+
+                // try parse JSON
+                try {
+                    var obj = JSON.parse(payload);
+                    // if JSON has lat & lng
+                    if ((obj.lat !== undefined && obj.lng !== undefined) || (obj.latitude !== undefined && obj.longitude !== undefined)) {
+                        var lat = parseFloat(obj.lat !== undefined ? obj.lat : obj.latitude);
+                        var lng = parseFloat(obj.lng !== undefined ? obj.lng : obj.longitude);
+                        var sim = obj.sim || simFromTopic || ('SIM_UNKNOWN');
+                        var name = obj.name || sim;
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            handleLocationMessage(sim, name, lat, lng);
+                            handled = true;
+                        }
+                    } else {
+                        // JSON but not coords -> show as info
+                        var sim = obj.sim || simFromTopic || 'Unknown';
+                        var name = obj.name || sim;
+                        addMessageToChat(name, sim, '🔔 ' + JSON.stringify(obj), 'info');
+                        handled = true;
+                    }
+                } catch (e) {
+                    // not JSON, continue
+                }
+
+                if (handled) return;
+
+                // If not JSON, check "lat,lng" plain string like "10.9337,106.8312"
+                var simpleCoordMatch = payload.trim().match(/^(-?\d+(\.\d+)?)[\s,;]+(-?\d+(\.\d+)?)$/);
+                if (simpleCoordMatch) {
+                    var lat = parseFloat(simpleCoordMatch[1]);
+                    var lng = parseFloat(simpleCoordMatch[3]);
+                    var sim = simFromTopic || 'SIM_UNKNOWN';
+                    var name = sim;
+                    handleLocationMessage(sim, name, lat, lng);
+                    return;
+                }
+
+                // Otherwise treat as text alert/message
+                var sim = simFromTopic || 'SIM_UNKNOWN';
+                var name = sim;
+                addMessageToChat(name, sim, '🔔 ' + payload, 'alert');
+            });
+        });
+
+        btnDisconnect.addEventListener('click', function () {
+            if (mqttClient) {
+                try { mqttClient.end(); } catch (e) { console.warn(e); }
+                mqttClient = null;
+                btnConnect.disabled = false;
+                btnDisconnect.disabled = true;
+                addMessageToChat('Hệ thống', 'MQTT', 'Đã ngắt kết nối MQTT', 'info');
+            }
+        });
+
+        // ---------------------------
+        // Handle incoming location: update marker + polyline + UI + chat
+        // ---------------------------
+        function handleLocationMessage(sim, name, lat, lng) {
+            // find device in devices[]; if not exists add
+            var dev = devices.find(function (d) { return d.sim === sim; });
+            if (!dev) {
+                dev = { sim: sim, name: name, lat: lat, lng: lng, createdAt: new Date() };
+                devices.push(dev);
+                addDeviceToUI(dev);
+            } else {
+                dev.lat = lat; dev.lng = lng;
+            }
+
+            // Marker
+            if (!markers[sim]) {
+                markers[sim] = L.marker([lat, lng], { icon: childIcon }).addTo(map)
+                    .bindPopup('<b>👶 ' + name + '</b><br>SIM: ' + sim);
+            } else {
+                // smooth setLatLng
+                markers[sim].setLatLng([lat, lng]);
+                markers[sim].setPopupContent('<b>👶 ' + name + '</b><br>SIM: ' + sim + '<br>Lat: ' + lat.toFixed(6) + '<br>Lng: ' + lng.toFixed(6) + '<br>🕒 ' + (new Date()).toLocaleString('vi-VN'));
+            }
+
+            // Polyline (tracking)
+            if (!paths[sim]) paths[sim] = [];
+            paths[sim].push([lat, lng]);
+
+            if (!polylines[sim]) {
+                polylines[sim] = L.polyline(paths[sim], { color: '#3b82f6', weight: 4, opacity: 0.9 }).addTo(map);
+            } else {
+                polylines[sim].setLatLngs(paths[sim]);
+            }
+
+            // Update UI
+            updateDeviceUI(sim, lat, lng);
+            updateStats();
+
+            // Pan to device (optional: only when selected or first update)
+            // map.panTo([lat, lng]);
+
+            // Chat message
+            addMessageToChat(name, sim, '📍 Vị trí: ' + lat.toFixed(6) + ', ' + lng.toFixed(6), 'info');
+        }
+
+        // ---------------------------
+        
+        document.getElementById('mqttHost').value = 'c53d20bafaec4b96a4f29ffa91cb7eb0.s1.eu.hivemq.cloud'; // example from your screenshot
+        document.getElementById('mqttUser').value = 'doangiahy12';
+        // document.getElementById('mqttPass').value = '...'; // điền mật khẩu ở đây nếu muốn
+
+        // ---------------------------
+        // Keyboard shortcuts: Enter to connect
+        // ---------------------------
+        document.getElementById('mqttPass').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') document.getElementById('btnMqttConnect').click();
+        });
+
+        // ---------------------------
+        // Optional: Clear all data
+        // ---------------------------
+        window.clearAllDevices = function () {
+            // remove markers & polylines
+            Object.keys(markers).forEach(function (k) { try { map.removeLayer(markers[k]); } catch (e) { } });
+            Object.keys(polylines).forEach(function (k) { try { map.removeLayer(polylines[k]); } catch (e) { } });
+            devices = [];
+            markers = {};
+            polylines = {};
+            paths = {};
+            document.getElementById('deviceList').innerHTML = '<div style="text-align: center; color: #718096; padding: 20px;">Chưa có thiết bị nào</div>';
+            updateStats();
+        };
+
+      
+        window.simulatePublish = function (sim) {
+           
+            var s = sim || 'SIM_TEST_01';
+            var latlng = randomLatLng();
+            var payload = JSON.stringify({ sim: s, name: 'Bé ' + s.slice(-3), lat: latlng[0], lng: latlng[1], ts: (new Date()).toISOString() });
+
+            if (mqttClient && mqttClient.connected) {
+                mqttClient.publish('safekid/' + s + '/location', payload);
+                addMessageToChat('Hệ thống', 'MQTT', 'Đã gửi thử payload tới topic safekid/' + s + '/location', 'info');
+            } else {
+               
+                handleLocationMessage(s, 'Bé ' + s.slice(-3), latlng[0], latlng[1]);
+                addMessageToChat('Hệ thống', 'SIM', 'Đã mô phỏng vị trí (offline)', 'info');
+            }
+        };
+
+               
+    </script>
+</body>
+</html>
